@@ -5,7 +5,7 @@ export interface UserProfile {
   avatar_url?: string;
 }
 
-export type ViewState = 'login' | 'register' | 'dashboard' | 'privacy' | 'terms';
+export type ViewState = 'homepage' | 'login' | 'register' | 'dashboard' | 'privacy' | 'terms';
 
 export interface VideoSubmissionData {
   personName: string;

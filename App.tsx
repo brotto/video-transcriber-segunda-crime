@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from './services/supabase';
+import { Homepage } from './views/Homepage';
 import { Auth } from './views/Auth';
 import { Dashboard } from './views/Dashboard';
 import { PrivacyPolicy } from './views/PrivacyPolicy';
@@ -11,7 +12,7 @@ import { Loader2 } from 'lucide-react';
 const App: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [viewState, setViewState] = useState<ViewState>('login');
+  const [viewState, setViewState] = useState<ViewState>('homepage');
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -129,6 +130,7 @@ const App: React.FC = () => {
   };
 
   const renderView = () => {
+    // Legal pages - accessible by anyone
     if (viewState === 'privacy') {
       return <PrivacyPolicy onBack={handleBackFromLegal} />;
     }
@@ -137,11 +139,18 @@ const App: React.FC = () => {
       return <TermsOfService onBack={handleBackFromLegal} />;
     }
 
+    // Authenticated user - show dashboard
     if (session && userProfile) {
       return <Dashboard user={userProfile} onNavigate={navigateTo} />;
     }
 
-    return <Auth currentView={viewState} onViewChange={navigateTo} />;
+    // Auth pages (login/register)
+    if (viewState === 'login' || viewState === 'register') {
+      return <Auth currentView={viewState} onViewChange={navigateTo} />;
+    }
+
+    // Default: Homepage (public)
+    return <Homepage onNavigate={navigateTo} />;
   };
 
   return (
