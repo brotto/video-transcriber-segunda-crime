@@ -2,6 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from './services/supabase';
 import { Auth } from './views/Auth';
 import { Dashboard } from './views/Dashboard';
+import { PrivacyPolicy } from './views/PrivacyPolicy';
+import { TermsOfService } from './views/TermsOfService';
+import { CookieConsent } from './components/CookieConsent';
 import { UserProfile, ViewState } from './types';
 import { Loader2 } from 'lucide-react';
 
@@ -81,13 +84,26 @@ const App: React.FC = () => {
     );
   }
 
+  const renderView = () => {
+    if (viewState === 'privacy') {
+      return <PrivacyPolicy onBack={() => setViewState(session ? 'dashboard' : 'login')} />;
+    }
+
+    if (viewState === 'terms') {
+      return <TermsOfService onBack={() => setViewState(session ? 'dashboard' : 'login')} />;
+    }
+
+    if (session && userProfile) {
+      return <Dashboard user={userProfile} onNavigate={setViewState} />;
+    }
+
+    return <Auth currentView={viewState} onViewChange={setViewState} />;
+  };
+
   return (
     <>
-      {session && userProfile ? (
-        <Dashboard user={userProfile} />
-      ) : (
-        <Auth currentView={viewState} onViewChange={setViewState} />
-      )}
+      {renderView()}
+      <CookieConsent />
     </>
   );
 };

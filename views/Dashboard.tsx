@@ -22,9 +22,10 @@ import {
 
 interface DashboardProps {
   user: UserProfile;
+  onNavigate?: (view: 'privacy' | 'terms') => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   const [formData, setFormData] = useState<Omit<VideoSubmissionData, 'videoFile'>>({
     personName: '',
     lawsuitNumber: ''
@@ -367,6 +368,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ user }) => {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-slate-800 bg-slate-950/80 py-6">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+            <p>&copy; {new Date().getFullYear()} Segunda Crime de Foz. Todos os direitos reservados.</p>
+            <div className="flex gap-6">
+              <button
+                onClick={() => onNavigate?.('privacy')}
+                className="hover:text-justice-400 transition-colors"
+              >
+                Política de Privacidade
+              </button>
+              <button
+                onClick={() => onNavigate?.('terms')}
+                className="hover:text-justice-400 transition-colors"
+              >
+                Termos de Serviço
+              </button>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

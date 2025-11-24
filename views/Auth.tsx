@@ -185,11 +185,27 @@ export const Auth: React.FC<AuthProps> = ({ currentView, onViewChange }) => {
 
           <div className="text-center text-sm text-slate-400 mt-6">
             {isRegister ? 'Já tem uma conta?' : 'Não tem uma conta?'}
-            <button 
+            <button
               onClick={() => onViewChange(isRegister ? 'login' : 'register')}
               className="ml-2 text-justice-400 hover:text-justice-300 font-medium transition-colors"
             >
               {isRegister ? 'Fazer Login' : 'Cadastre-se'}
+            </button>
+          </div>
+
+          {/* Legal Links */}
+          <div className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-6 text-xs text-slate-500">
+            <button
+              onClick={() => onViewChange('privacy')}
+              className="hover:text-justice-400 transition-colors"
+            >
+              Política de Privacidade
+            </button>
+            <button
+              onClick={() => onViewChange('terms')}
+              className="hover:text-justice-400 transition-colors"
+            >
+              Termos de Serviço
             </button>
           </div>
         </div>
