@@ -103,7 +103,7 @@ const App: React.FC = () => {
   return (
     <>
       {renderView()}
-      <CookieConsent />
+      <CookieConsent onNavigate={setViewState} />
     </>
   );
 };

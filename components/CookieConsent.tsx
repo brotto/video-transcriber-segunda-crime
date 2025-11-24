@@ -2,7 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from './Button';
 import { X, Cookie } from 'lucide-react';
 
-export const CookieConsent: React.FC = () => {
+interface CookieConsentProps {
+  onNavigate?: (view: 'privacy' | 'terms') => void;
+}
+
+export const CookieConsent: React.FC<CookieConsentProps> = ({ onNavigate }) => {
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
@@ -42,27 +46,25 @@ export const CookieConsent: React.FC = () => {
               <p className="text-slate-300 text-sm leading-relaxed mb-4">
                 Utilizamos cookies essenciais para garantir o funcionamento adequado do sistema de autenticação
                 e para melhorar sua experiência. Ao continuar navegando, você concorda com nossa{' '}
-                <a
-                  href="#privacy"
+                <button
                   className="text-justice-400 hover:text-justice-300 underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Será implementado com o sistema de rotas
+                  onClick={() => {
+                    handleAccept();
+                    onNavigate?.('privacy');
                   }}
                 >
                   Política de Privacidade
-                </a>
+                </button>
                 {' '}e{' '}
-                <a
-                  href="#terms"
+                <button
                   className="text-justice-400 hover:text-justice-300 underline"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    // Será implementado com o sistema de rotas
+                  onClick={() => {
+                    handleAccept();
+                    onNavigate?.('terms');
                   }}
                 >
                   Termos de Serviço
-                </a>.
+                </button>.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3">
