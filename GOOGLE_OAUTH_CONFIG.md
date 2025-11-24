@@ -2,17 +2,19 @@
 
 Este guia explica como configurar o Google Cloud Console para habilitar o OAuth do Google no aplicativo.
 
-## URLs das Páginas Legais
+## ✅ URLs das Páginas Legais (COPIE ESTAS URLS!)
 
-Após o deploy, você terá acesso às seguintes páginas que são necessárias para a configuração do Google OAuth:
+Use estas URLs EXATAS ao configurar o Google Cloud Console:
 
 ### Desenvolvimento (localhost:5173)
-- **Política de Privacidade:** http://localhost:5173 (clicar em "Política de Privacidade" no footer)
-- **Termos de Serviço:** http://localhost:5173 (clicar em "Termos de Serviço" no footer)
+- **Política de Privacidade:** `http://localhost:5173/#privacy`
+- **Termos de Serviço:** `http://localhost:5173/#terms`
 
 ### Produção (após deploy no Vercel)
-- **Política de Privacidade:** https://seu-dominio.com/ (clicar em "Política de Privacidade")
-- **Termos de Serviço:** https://seu-dominio.com/ (clicar em "Termos de Serviço")
+- **Política de Privacidade:** `https://seu-dominio.com/#privacy`
+- **Termos de Serviço:** `https://seu-dominio.com/#terms`
+
+**Observação:** Substitua `seu-dominio.com` pela sua URL real do Vercel ou domínio personalizado.
 
 ---
 
@@ -41,8 +43,8 @@ Após o deploy, você terá acesso às seguintes páginas que são necessárias 
 - **Logo do app:** (opcional) Faça upload de um logo 120x120px
 - **Domínio do app:**
   - **Página inicial do aplicativo:** `https://seu-dominio.com` (ou URL da Vercel)
-  - **Política de Privacidade:** `https://seu-dominio.com/` (navegar para página de privacidade via footer)
-  - **Termos de Serviço:** `https://seu-dominio.com/` (navegar para página de termos via footer)
+  - **Política de Privacidade:** `https://seu-dominio.com/#privacy`
+  - **Termos de Serviço:** `https://seu-dominio.com/#terms`
 - **Domínios autorizados:**
   - Adicione: `seu-dominio.com`
   - Adicione: `seu-projeto.vercel.app` (se usar Vercel)
@@ -174,15 +176,15 @@ Para este app (apenas email e profile), você pode:
 
 ---
 
-## URLs Importantes para o Google Console
+## 📋 URLs Importantes para o Google Console
 
-Quando solicitado, use estas URLs:
+Quando solicitado, use estas URLs EXATAS:
 
 | Campo | URL de Desenvolvimento | URL de Produção |
 |-------|----------------------|-----------------|
 | Página inicial | http://localhost:5173 | https://seu-dominio.com |
-| Política de Privacidade | http://localhost:5173 (via footer) | https://seu-dominio.com/ (via footer) |
-| Termos de Serviço | http://localhost:5173 (via footer) | https://seu-dominio.com/ (via footer) |
+| Política de Privacidade | `http://localhost:5173/#privacy` | `https://seu-dominio.com/#privacy` |
+| Termos de Serviço | `http://localhost:5173/#terms` | `https://seu-dominio.com/#terms` |
 | URI de Redirecionamento | https://mshrfewsfyzrknkqwnxs.supabase.co/auth/v1/callback | (mesmo) |
 
 ---
@@ -217,11 +219,14 @@ Quando solicitado, use estas URLs:
 
 ## Notas Importantes
 
-1. **As páginas de Política de Privacidade e Termos de Serviço já estão implementadas** no app e acessíveis via links no footer
-2. **Não é necessário criar páginas HTML separadas** - use a URL base do app
-3. **O aviso de cookies** aparecerá automaticamente para novos visitantes
-4. **Após o deploy no Vercel**, lembre-se de atualizar todas as URLs no Google Console
-5. **Aguarde alguns minutos** após salvar configurações para que as mudanças propaguem
+1. **As páginas de Política de Privacidade e Termos de Serviço já estão implementadas** e têm URLs específicas:
+   - Política: `/#privacy`
+   - Termos: `/#terms`
+2. **Use as URLs EXATAS com `#privacy` e `#terms`** - o Google precisa de URLs diretas
+3. **As páginas funcionam tanto via links no footer quanto via URL direta** no navegador
+4. **O aviso de cookies** aparecerá automaticamente para novos visitantes
+5. **Após o deploy no Vercel**, lembre-se de atualizar todas as URLs no Google Console
+6. **Aguarde alguns minutos** após salvar configurações para que as mudanças propaguem
 
 ---
 
