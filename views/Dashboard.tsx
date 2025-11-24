@@ -3,7 +3,7 @@ import { supabase } from '../services/supabase';
 import { Button } from '../components/Button';
 import { Input } from '../components/Input';
 import { Logo } from '../components/Logo';
-import { UserProfile, VideoSubmissionData, Transcription, TranscriptionStatus } from '../types';
+import { UserProfile, VideoSubmissionData } from '../types';
 import { WEBHOOK_URL } from '../constants';
 import {
   UploadCloud,
@@ -18,7 +18,8 @@ import {
   Copy,
   ArrowLeft,
   Loader2,
-  Clock
+  Clock,
+  Mail
 } from 'lucide-react';
 
 interface DashboardProps {
@@ -35,11 +36,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   const [isDragOver, setIsDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Estados para processamento assíncrono
-  const [currentTranscription, setCurrentTranscription] = useState<Transcription | null>(null);
-  const [processingStatus, setProcessingStatus] = useState<TranscriptionStatus | null>(null);
+  // Estados para processamento
+  const [isWaiting, setIsWaiting] = useState(false);
+  const [transcription, setTranscription] = useState<string>('');
+  const [processingStatus, setProcessingStatus] = useState<'waiting' | 'completed' | 'error' | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [sessionId, setSessionId] = useState<string>('');
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -92,47 +95,66 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
     }
   };
 
+  // Gerar sessionId único
+  const generateSessionId = () => {
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 15)}`;
+  };
+
   // Polling para verificar status da transcrição
-  const startPolling = (transcriptionId: string) => {
+  const startPolling = (sid: string) => {
     // Limpar qualquer polling anterior
     if (pollingIntervalRef.current) {
       clearInterval(pollingIntervalRef.current);
     }
 
-    // Verificar a cada 5 segundos
+    console.log('[Polling] Iniciando para sessionId:', sid);
+
+    // Verificar a cada 3 segundos
     pollingIntervalRef.current = setInterval(async () => {
       try {
-        const { data, error } = await supabase
-          .from('transcriptions')
-          .select('*')
-          .eq('id', transcriptionId)
-          .single();
+        const response = await fetch(`/api/transcription-status?sessionId=${sid}`);
+        const data = await response.json();
 
-        if (error) {
-          console.error('Erro ao buscar transcrição:', error);
+        console.log('[Polling] Status:', data);
+
+        if (response.status === 404) {
+          // Sessão não encontrada ou expirada - continuar aguardando
           return;
         }
 
-        if (data) {
-          setCurrentTranscription(data);
+        if (data.success && data.status) {
           setProcessingStatus(data.status);
 
-          // Se completou ou deu erro, parar polling
-          if (data.status === 'completed' || data.status === 'error') {
+          if (data.status === 'completed') {
+            // Transcrição concluída
+            setTranscription(data.transcription || '');
+            setIsWaiting(false);
+
+            // Parar polling
             if (pollingIntervalRef.current) {
               clearInterval(pollingIntervalRef.current);
               pollingIntervalRef.current = null;
             }
 
-            if (data.status === 'error') {
-              setErrorMessage(data.error_message || 'Erro desconhecido no processamento');
+            console.log('[Polling] Transcrição recebida, parando polling');
+          } else if (data.status === 'error') {
+            // Erro no processamento
+            setErrorMessage(data.errorMessage || 'Erro desconhecido no processamento');
+            setIsWaiting(false);
+
+            // Parar polling
+            if (pollingIntervalRef.current) {
+              clearInterval(pollingIntervalRef.current);
+              pollingIntervalRef.current = null;
             }
+
+            console.log('[Polling] Erro detectado, parando polling');
           }
         }
       } catch (err) {
-        console.error('Erro no polling:', err);
+        console.error('[Polling] Erro:', err);
       }
-    }, 5000); // 5 segundos
+    }, 3000); // 3 segundos
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -144,34 +166,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
 
     setIsSubmitting(true);
     setErrorMessage('');
-    setCurrentTranscription(null);
+    setTranscription('');
     setProcessingStatus(null);
 
     try {
-      // 1. Criar registro no Supabase ANTES de enviar para o webhook
-      const { data: transcriptionRecord, error: dbError } = await supabase
-        .from('transcriptions')
-        .insert({
-          person_name: formData.personName,
-          lawsuit_number: formData.lawsuitNumber,
-          video_filename: videoFile.name,
-          video_size: videoFile.size,
-          status: 'pending',
-          submitted_by_id: user.id,
-          submitted_by_email: user.email
-        })
-        .select()
-        .single();
+      // Gerar sessionId único
+      const sid = generateSessionId();
+      setSessionId(sid);
 
-      if (dbError || !transcriptionRecord) {
-        throw new Error('Erro ao criar registro no banco de dados');
-      }
+      console.log('[Submit] SessionId gerado:', sid);
 
-      console.log('Registro criado no Supabase:', transcriptionRecord.id);
-
-      // 2. Enviar para o webhook n8n com o ID da transcrição
+      // Enviar para o webhook n8n
       const payload = new FormData();
-      payload.append('transcriptionId', transcriptionRecord.id);
+      payload.append('sessionId', sid);
       payload.append('personName', formData.personName);
       payload.append('lawsuitNumber', formData.lawsuitNumber);
       payload.append('submittedByEmail', user.email);
@@ -188,29 +195,30 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
       }
 
       const result = await response.json();
-      console.log('Resposta do webhook:', result);
+      console.log('[Submit] Resposta do webhook:', result);
 
-      // 3. Iniciar polling para verificar status
-      setCurrentTranscription(transcriptionRecord);
-      setProcessingStatus('pending');
-      startPolling(transcriptionRecord.id);
+      // Entrar em modo de espera
+      setIsWaiting(true);
+      setProcessingStatus('waiting');
 
-      // Exibir mensagem de sucesso no envio
-      alert('Vídeo enviado com sucesso! O processamento começará em breve.');
+      // Iniciar polling para verificar status
+      startPolling(sid);
 
     } catch (error: any) {
-      console.error('Erro ao enviar:', error);
+      console.error('[Submit] Erro:', error);
       setErrorMessage(error.message || 'Erro ao enviar o vídeo');
+      setIsSubmitting(false);
     } finally {
+      // Manter isSubmitting true enquanto aguarda resposta
       setIsSubmitting(false);
     }
   };
 
   const handleCopyTranscription = async () => {
-    if (!currentTranscription?.transcription) return;
+    if (!transcription) return;
 
     try {
-      await navigator.clipboard.writeText(currentTranscription.transcription);
+      await navigator.clipboard.writeText(transcription);
       setCopySuccess(true);
       setTimeout(() => setCopySuccess(false), 2000);
     } catch (err) {
@@ -221,9 +229,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
   const handleBackToDashboard = () => {
     setFormData({ personName: '', lawsuitNumber: '' });
     setVideoFile(null);
-    setCurrentTranscription(null);
+    setTranscription('');
     setProcessingStatus(null);
     setErrorMessage('');
+    setIsWaiting(false);
+    setSessionId('');
     if (fileInputRef.current) fileInputRef.current.value = '';
 
     // Limpar polling
@@ -235,60 +245,67 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
 
   // Renderizar status de processamento
   const renderProcessingStatus = () => {
-    if (!processingStatus) return null;
+    if (!isWaiting && !processingStatus) return null;
 
-    const statusConfig = {
-      pending: {
-        icon: <Clock className="animate-pulse" size={20} />,
-        text: 'Aguardando processamento...',
-        color: 'text-blue-400',
-        bgColor: 'bg-blue-500/10',
-        borderColor: 'border-blue-500/20'
-      },
-      processing: {
-        icon: <Loader2 className="animate-spin" size={20} />,
-        text: 'Processando transcrição...',
-        color: 'text-yellow-400',
-        bgColor: 'bg-yellow-500/10',
-        borderColor: 'border-yellow-500/20'
-      },
-      completed: {
-        icon: <CheckCircle size={20} />,
-        text: 'Transcrição concluída!',
-        color: 'text-emerald-400',
-        bgColor: 'bg-emerald-500/10',
-        borderColor: 'border-emerald-500/20'
-      },
-      error: {
-        icon: <AlertCircle size={20} />,
-        text: 'Erro no processamento',
-        color: 'text-red-400',
-        bgColor: 'bg-red-500/10',
-        borderColor: 'border-red-500/20'
-      }
-    };
+    if (processingStatus === 'waiting') {
+      return (
+        <div className="mb-6 p-6 bg-blue-500/10 border border-blue-500/20 rounded-lg animate-fadeIn">
+          <div className="flex items-center gap-4 mb-4">
+            <Loader2 className="animate-spin text-blue-400" size={32} />
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-blue-300 mb-1">
+                Processando Transcrição...
+              </h3>
+              <p className="text-blue-200/80 text-sm">
+                Aguarde enquanto processamos seu vídeo. Isso pode levar alguns minutos.
+              </p>
+            </div>
+          </div>
 
-    const config = statusConfig[processingStatus];
+          <div className="space-y-3 pl-12">
+            <div className="flex items-center gap-3 text-blue-200/70 text-sm">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
+              <span>Vídeo recebido pelo servidor</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-200/70 text-sm">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-75"></div>
+              <span>Extraindo áudio do vídeo</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-200/70 text-sm">
+              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse delay-150"></div>
+              <span>Transcrevendo fala em texto</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-200/70 text-sm">
+              <Mail size={16} className="text-blue-400" />
+              <span>Uma cópia será enviada para: <strong>{user.email}</strong></span>
+            </div>
+          </div>
 
-    return (
-      <div className={`mb-6 p-4 ${config.bgColor} border ${config.borderColor} rounded-lg flex items-center gap-3 ${config.color} animate-fadeIn`}>
-        {config.icon}
-        <div className="flex-1">
-          <p className="font-semibold">{config.text}</p>
-          {processingStatus === 'processing' && (
-            <p className="text-sm opacity-80 mt-1">
-              Isso pode levar alguns minutos dependendo do tamanho do vídeo.
-            </p>
-          )}
-          {processingStatus === 'error' && errorMessage && (
-            <p className="text-sm opacity-80 mt-1">{errorMessage}</p>
-          )}
+          <div className="mt-4 pt-4 border-t border-blue-500/20 text-xs text-blue-300/60 text-center">
+            Não feche esta página. O resultado aparecerá aqui automaticamente.
+          </div>
         </div>
-        <button onClick={() => setProcessingStatus(null)} className={`ml-auto hover:${config.bgColor} p-1 rounded`}>
-          <X size={16} />
-        </button>
-      </div>
-    );
+      );
+    }
+
+    if (processingStatus === 'error') {
+      return (
+        <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3 text-red-300 animate-fadeIn">
+          <AlertCircle size={20} />
+          <div className="flex-1">
+            <p className="font-semibold">Erro no processamento</p>
+            {errorMessage && (
+              <p className="text-sm opacity-80 mt-1">{errorMessage}</p>
+            )}
+          </div>
+          <button onClick={() => setProcessingStatus(null)} className="ml-auto hover:bg-red-500/20 p-1 rounded">
+            <X size={16} />
+          </button>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
@@ -341,13 +358,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                   <li>Certifique-se que o áudio está claro.</li>
                   <li>Formatos aceitos: MP4, MOV, AVI.</li>
                   <li>Tamanho máximo sugerido: 500MB.</li>
-                  <li>O processamento é assíncrono e pode levar alguns minutos.</li>
+                  <li>Aguarde na tela - o resultado aparecerá automaticamente.</li>
+                  <li>Uma cópia será enviada para seu email.</li>
                 </ul>
+              </div>
+
+              <div className="mt-4 p-3 bg-amber-900/20 border border-amber-800/50 rounded-lg">
+                <div className="flex items-start gap-2">
+                  <AlertCircle size={16} className="text-amber-400 shrink-0 mt-0.5" />
+                  <div className="text-xs text-amber-300/90">
+                    <strong className="block mb-1">Privacidade</strong>
+                    As transcrições não são armazenadas em nossos servidores. Elas são enviadas diretamente para seu email.
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Right Column: Upload Form */}
+          {/* Right Column: Upload Form or Result */}
           <div className="lg:col-span-2">
             <div className="glass-panel rounded-2xl p-6 sm:p-8 shadow-2xl relative overflow-hidden">
                {/* Background decoration */}
@@ -358,8 +386,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
               {/* Status de processamento */}
               {renderProcessingStatus()}
 
-              {/* Formulário */}
-              {!currentTranscription && (
+              {/* Formulário - esconde quando está aguardando ou concluído */}
+              {!isWaiting && processingStatus !== 'completed' && (
                 <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <Input
@@ -369,6 +397,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                       value={formData.personName}
                       onChange={(e) => setFormData({...formData, personName: e.target.value})}
                       required
+                      disabled={isSubmitting}
                     />
                     <Input
                       label="Número do Processo"
@@ -377,6 +406,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                       value={formData.lawsuitNumber}
                       onChange={(e) => setFormData({...formData, lawsuitNumber: e.target.value})}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
 
@@ -394,11 +424,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                           : videoFile
                             ? 'border-emerald-500/50 bg-emerald-500/5'
                             : 'border-slate-700 hover:border-slate-600 hover:bg-slate-900/50 bg-slate-900/30'}
+                        ${isSubmitting ? 'opacity-50 cursor-not-allowed' : ''}
                       `}
                       onDragOver={handleDragOver}
                       onDragLeave={handleDragLeave}
                       onDrop={handleDrop}
-                      onClick={() => fileInputRef.current?.click()}
+                      onClick={() => !isSubmitting && fileInputRef.current?.click()}
                     >
                       <input
                         type="file"
@@ -406,6 +437,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                         className="hidden"
                         accept="video/*"
                         onChange={handleFileChange}
+                        disabled={isSubmitting}
                       />
 
                       {videoFile ? (
@@ -417,12 +449,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                           <p className="text-slate-500 text-sm mt-1">
                             {(videoFile.size / (1024 * 1024)).toFixed(2)} MB prontos para envio
                           </p>
-                          <p className="text-slate-500 text-xs mt-4 hover:text-red-400 transition-colors" onClick={(e) => {
-                            e.stopPropagation();
-                            setVideoFile(null);
-                          }}>
-                            Remover arquivo
-                          </p>
+                          {!isSubmitting && (
+                            <p className="text-slate-500 text-xs mt-4 hover:text-red-400 transition-colors" onClick={(e) => {
+                              e.stopPropagation();
+                              setVideoFile(null);
+                            }}>
+                              Remover arquivo
+                            </p>
+                          )}
                         </div>
                       ) : (
                         <>
@@ -454,7 +488,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
               )}
 
               {/* Transcrição Completa */}
-              {currentTranscription && processingStatus === 'completed' && currentTranscription.transcription && (
+              {processingStatus === 'completed' && transcription && (
                 <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <div className="flex items-center justify-between">
                     <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -471,16 +505,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onNavigate }) => {
                     </Button>
                   </div>
 
-                  <div className="bg-slate-900/50 border border-slate-700 rounded-lg p-4 text-sm text-slate-300 space-y-1">
-                    <p><strong>Processo:</strong> {currentTranscription.lawsuit_number}</p>
-                    <p><strong>Envolvido:</strong> {currentTranscription.person_name}</p>
-                    <p><strong>Arquivo:</strong> {currentTranscription.video_filename}</p>
+                  <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-4 text-sm text-emerald-200">
+                    <Mail size={16} className="inline mr-2" />
+                    Uma cópia desta transcrição foi enviada para: <strong>{user.email}</strong>
                   </div>
 
                   <div className="relative">
                     <div className="bg-slate-900/70 border border-slate-700 rounded-xl p-6 max-h-96 overflow-y-auto">
                       <pre className="text-slate-200 text-sm leading-relaxed whitespace-pre-wrap font-mono">
-                        {currentTranscription.transcription}
+                        {transcription}
                       </pre>
                     </div>
 
