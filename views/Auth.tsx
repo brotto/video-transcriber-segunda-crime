@@ -34,15 +34,23 @@ export const Auth: React.FC<AuthProps> = ({ currentView, onViewChange }) => {
             data: {
               name: fullName,
             },
+            emailRedirectTo: undefined, // Desabilitar redirect de email
           },
         });
 
         if (signUpError) throw signUpError;
 
-        // Não precisa inserir em public.users - usamos apenas auth.users
-        // A conta já está ativa (confirmação de email desabilitada)
+        console.log('[Auth] SignUp response:', data);
 
-        // Usuário já está autenticado e será redirecionado pelo onAuthStateChange
+        // Verificar se usuário foi confirmado automaticamente
+        if (data.user && !data.user.confirmed_at) {
+          console.warn('[Auth] Usuário não foi confirmado automaticamente. Verifique configuração do Supabase.');
+          throw new Error('Por favor, verifique seu email para confirmar a conta.');
+        }
+
+        // Se chegou aqui, usuário está autenticado
+        // onAuthStateChange no App.tsx vai redirecionar para dashboard
+        console.log('[Auth] Usuário criado e autenticado:', data.user?.email);
       } else {
         // Sign In Logic
         const { error: signInError } = await supabase.auth.signInWithPassword({
