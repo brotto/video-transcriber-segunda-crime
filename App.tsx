@@ -73,35 +73,15 @@ const App: React.FC = () => {
   }, []);
 
   const fetchUserProfile = async (authUser: any) => {
-    // 1. Try to get from 'users' table
-    const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', authUser.id)
-      .single();
+    // Usar apenas dados de auth.users (não precisa de tabela public.users)
+    const profile: UserProfile = {
+      id: authUser.id,
+      email: authUser.email,
+      name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || '',
+      avatar_url: authUser.user_metadata?.avatar_url
+    };
 
-    if (data) {
-      setUserProfile(data);
-    } else {
-      // 2. If not in DB yet (e.g. first Google Login), fallback to auth metadata
-      const profile: UserProfile = {
-        id: authUser.id,
-        email: authUser.email,
-        name: authUser.user_metadata?.name || authUser.user_metadata?.full_name || '',
-        avatar_url: authUser.user_metadata?.avatar_url
-      };
-      
-      setUserProfile(profile);
-
-      // Attempt to sync to DB silently if it was missing
-      if (error && (error.code === 'PGRST116' || error.message.includes('JSON'))) {
-         await supabase.from('users').upsert({
-             id: profile.id,
-             email: profile.email,
-             name: profile.name
-         });
-      }
-    }
+    setUserProfile(profile);
   };
 
   if (loading) {

@@ -26,7 +26,7 @@ export const Auth: React.FC<AuthProps> = ({ currentView, onViewChange }) => {
 
     try {
       if (isRegister) {
-        // Sign Up Logic
+        // Sign Up Logic - sem confirmação de email
         const { data, error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -38,18 +38,11 @@ export const Auth: React.FC<AuthProps> = ({ currentView, onViewChange }) => {
         });
 
         if (signUpError) throw signUpError;
-        
-        // Insert into custom users table if needed (Supabase triggers usually handle this, but doing it manually for safety based on requirements)
-        if (data.user) {
-           const { error: dbError } = await supabase
-            .from('users')
-            .insert([{ id: data.user.id, email: data.user.email, name: fullName }]);
-            
-           if (dbError) console.error("DB Insert warning:", dbError); // Don't block auth flow on DB insert fail
-        }
 
-        alert('Cadastro realizado! Por favor verifique seu email ou faça login.');
-        onViewChange('login');
+        // Não precisa inserir em public.users - usamos apenas auth.users
+        // A conta já está ativa (confirmação de email desabilitada)
+
+        // Usuário já está autenticado e será redirecionado pelo onAuthStateChange
       } else {
         // Sign In Logic
         const { error: signInError } = await supabase.auth.signInWithPassword({
