@@ -15,14 +15,34 @@ const App: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Check URL hash for direct navigation
+    const handleHashChange = () => {
+      const hash = window.location.hash.slice(1); // Remove '#'
+      if (hash === 'privacy') {
+        setViewState('privacy');
+      } else if (hash === 'terms') {
+        setViewState('terms');
+      }
+    };
+
+    // Check hash on mount
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      if (session) {
-        setViewState('dashboard');
-        fetchUserProfile(session.user);
-      } else {
-        setViewState('login');
+      // Don't override if we're on a legal page
+      const hash = window.location.hash.slice(1);
+      if (!hash || (hash !== 'privacy' && hash !== 'terms')) {
+        if (session) {
+          setViewState('dashboard');
+          fetchUserProfile(session.user);
+        } else {
+          setViewState('login');
+        }
       }
       setLoading(false);
     });
@@ -32,16 +52,23 @@ const App: React.FC = () => {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) {
-        setViewState('dashboard');
-        fetchUserProfile(session.user);
-      } else {
-        setViewState('login');
-        setUserProfile(null);
+      const hash = window.location.hash.slice(1);
+      // Don't override if we're on a legal page
+      if (!hash || (hash !== 'privacy' && hash !== 'terms')) {
+        if (session) {
+          setViewState('dashboard');
+          fetchUserProfile(session.user);
+        } else {
+          setViewState('login');
+          setUserProfile(null);
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('hashchange', handleHashChange);
+    };
   }, []);
 
   const fetchUserProfile = async (authUser: any) => {
@@ -84,26 +111,43 @@ const App: React.FC = () => {
     );
   }
 
+  // Helper function to navigate with URL update
+  const navigateTo = (view: ViewState) => {
+    if (view === 'privacy') {
+      window.location.hash = '#privacy';
+    } else if (view === 'terms') {
+      window.location.hash = '#terms';
+    } else {
+      window.location.hash = '';
+      setViewState(view);
+    }
+  };
+
+  const handleBackFromLegal = () => {
+    window.location.hash = '';
+    setViewState(session ? 'dashboard' : 'login');
+  };
+
   const renderView = () => {
     if (viewState === 'privacy') {
-      return <PrivacyPolicy onBack={() => setViewState(session ? 'dashboard' : 'login')} />;
+      return <PrivacyPolicy onBack={handleBackFromLegal} />;
     }
 
     if (viewState === 'terms') {
-      return <TermsOfService onBack={() => setViewState(session ? 'dashboard' : 'login')} />;
+      return <TermsOfService onBack={handleBackFromLegal} />;
     }
 
     if (session && userProfile) {
-      return <Dashboard user={userProfile} onNavigate={setViewState} />;
+      return <Dashboard user={userProfile} onNavigate={navigateTo} />;
     }
 
-    return <Auth currentView={viewState} onViewChange={setViewState} />;
+    return <Auth currentView={viewState} onViewChange={navigateTo} />;
   };
 
   return (
     <>
       {renderView()}
-      <CookieConsent onNavigate={setViewState} />
+      <CookieConsent onNavigate={navigateTo} />
     </>
   );
 };
