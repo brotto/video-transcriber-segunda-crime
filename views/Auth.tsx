@@ -195,19 +195,27 @@ export const Auth: React.FC<AuthProps> = ({ currentView, onViewChange }) => {
           </div>
 
           {/* Legal Links */}
-          <div className="mt-8 pt-6 border-t border-slate-800 flex justify-center gap-6 text-xs text-slate-500">
-            <button
-              onClick={() => onViewChange('privacy')}
-              className="hover:text-justice-400 transition-colors"
-            >
-              Política de Privacidade
-            </button>
-            <button
-              onClick={() => onViewChange('terms')}
-              className="hover:text-justice-400 transition-colors"
-            >
-              Termos de Serviço
-            </button>
+          <div className="mt-8 pt-6 border-t border-slate-800 space-y-3">
+            <div className="flex justify-center gap-6 text-xs text-slate-500">
+              <button
+                onClick={() => onViewChange('privacy')}
+                className="hover:text-justice-400 transition-colors"
+              >
+                Política de Privacidade
+              </button>
+              <button
+                onClick={() => onViewChange('terms')}
+                className="hover:text-justice-400 transition-colors"
+              >
+                Termos de Serviço
+              </button>
+            </div>
+            <div className="text-center text-xs text-slate-600">
+              Criado e desenvolvido por{' '}
+              <span className="text-slate-500 font-medium">Alexandre Brotto Rangel da Silva</span>
+              <br />
+              Técnico Judiciário - TJPR
+            </div>
           </div>
         </div>
       </div>
