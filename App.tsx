@@ -42,7 +42,7 @@ const App: React.FC = () => {
           setViewState('dashboard');
           fetchUserProfile(session.user);
         } else {
-          setViewState('login');
+          setViewState('homepage'); // Mostrar homepage para visitantes
         }
       }
       setLoading(false);
@@ -60,7 +60,7 @@ const App: React.FC = () => {
           setViewState('dashboard');
           fetchUserProfile(session.user);
         } else {
-          setViewState('login');
+          setViewState('homepage'); // Mostrar homepage quando fizer logout
           setUserProfile(null);
         }
       }
@@ -106,7 +106,7 @@ const App: React.FC = () => {
 
   const handleBackFromLegal = () => {
     window.location.hash = '';
-    setViewState(session ? 'dashboard' : 'login');
+    setViewState(session ? 'dashboard' : 'homepage');
   };
 
   const renderView = () => {
