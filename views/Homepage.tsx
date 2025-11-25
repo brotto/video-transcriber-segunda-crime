@@ -45,10 +45,34 @@ export const Homepage: React.FC<HomepageProps> = ({ onNavigate }) => {
                 Vídeos Judiciais
               </span>
             </h1>
-            <p className="text-xl text-slate-400 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Plataforma segura e eficiente desenvolvida especialmente para a Segunda Crime de Foz do Iguaçu.
-              Transforme vídeos de audiências e depoimentos em transcrições precisas em minutos.
-            </p>
+            <div className="text-left text-lg text-slate-400 mb-8 max-w-3xl mx-auto leading-relaxed space-y-3">
+              <ul className="space-y-2">
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Transcrições de vídeos em qualquer formato (de mp4 a webm).</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Sem registro em banco de dados, tanto dos vídeos quanto das transcrições, preservando completamente a privacidade e sigilo.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Totalmente gratuita.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Uso destinado aos servidores e assessores dos Tribunais de Justiça.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Tecnologia de processamento via Whisper (OpenAI), em servidor privado.</span>
+                </li>
+                <li className="flex items-start gap-3">
+                  <CheckCircle className="text-justice-400 shrink-0 mt-1" size={20} />
+                  <span>Em BREVE incluiremos mais ferramentas para uso dos servidores do Poder Judiciário.</span>
+                </li>
+              </ul>
+            </div>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Button
                 size="lg"
@@ -365,8 +389,13 @@ export const Homepage: React.FC<HomepageProps> = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="border-t border-slate-800 pt-8 text-center text-slate-500 text-sm">
-            <p>&copy; {new Date().getFullYear()} Video Transcriber - Segunda Crime de Foz. Todos os direitos reservados.</p>
+          <div className="border-t border-slate-800 pt-8 text-center space-y-2">
+            <p className="text-slate-500 text-sm">
+              &copy; {new Date().getFullYear()} Video Transcriber - Segunda Crime de Foz. Todos os direitos reservados.
+            </p>
+            <p className="text-slate-600 text-xs">
+              Desenvolvido por <span className="text-slate-400 font-medium">Alexandre Brotto Rangel da Silva</span> - Técnico Judiciário - TJPR
+            </p>
           </div>
         </div>
       </footer>
